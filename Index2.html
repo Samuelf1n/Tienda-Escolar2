@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tienda Escolar — Mejorada</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#ffffff; --accent:#6C63FF; --accent-2:#FF7AA2;
+    --green:#27ae60; --danger:#e74c3c; --muted:#6b7280;
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter, "Segoe UI", Roboto, Arial; margin:0; background:var(--bg); color:#111}
+  header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff}
+  header h1{margin:0;font-size:20px;letter-spacing:0.4px}
+  #headerRight{display:flex;align-items:center;gap:10px}
+  .btn{background:rgba(255,255,255,0.12);border:0;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,0.18)}
+  nav{display:flex;gap:10px;padding:12px 20px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.04)}
+  nav button{border:0;background:linear-gradient(90deg,#f0f2ff,#fff);padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;color:#333}
+  main{max-width:980px;margin:18px auto;padding:16px}
+  #content{background:var(--card);border-radius:12px;padding:18px;min-height:340px;box-shadow:0 6px 30px rgba(44,47,60,0.06)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .card{background:linear-gradient(180deg,#fff,#fbfdff);padding:14px;border-radius:12px;border:1px solid #eef2ff;box-shadow:0 6px 18px rgba(99,102,241,0.06)}
+  .prod-title{font-weight:800}
+  .muted{color:var(--muted);font-size:13px}
+  .precio{color:var(--green);font-weight:800;margin-top:8px}
+  .estado{font-weight:700;margin-top:6px}
+  .estado.disponible{color:green}
+  .estado.agotado{color:var(--danger)}
+  .encargar{display:inline-block;margin-top:12px;padding:10px 14px;background:var(--accent);color:#fff;border-radius:10px;text-decoration:none}
+  .profile{display:flex;align-items:center;gap:10px;color:#fff}
+  .profile img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15)}
+  .small{font-size:13px;color:var(--muted)}
+  input[type="text"], input[type="password"]{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e7f0;margin-bottom:8px}
+  .actionRow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .primary{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+  .danger{background:var(--danger);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+  footer{text-align:center;color:var(--muted);margin:18px 0;font-size:13px}
+  .hidden{display:none}
+  /* responsive */
+  @media (max-width:560px){ header{flex-direction:column;gap:12px;align-items:flex-start} nav{overflow:auto;padding:8px} }
+</style>
+</head>
+<body>
+
+  <header>
+    <h1>🛒 Tienda Escolar</h1>
+    <div id="headerRight">
+      <div id="authButtons">
+        <button id="btnShowLogin" class="btn">Iniciar sesión</button>
+        <button id="btnShowRegister" class="btn">Registrarse</button>
+      </div>
+
+      <div id="profileBox" class="hidden">
+        <!-- Pon tu imagen aquí en la misma carpeta y cámbiale el nombre si hace falta -->
+        <img id="profileImg" src="profile.png" alt="perfil" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22%236C63FF%22/></svg>'">
+        <div id="profileName" style="color:#fff;font-weight:800"></div>
+        <button id="btnLogout" class="btn" style="background:rgba(255,255,255,0.12)">Cerrar</button>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button id="navTienda">Tienda</button>
+    <button id="navMas">Más</button>
+    <button id="navUsuarios" class="hidden">Usuarios Registrados</button>
+  </nav>
+
+  <main>
+    <div id="content">
+      <h2 style="margin-top:0">Bienvenido</h2>
+      <p class="small">Seleccione una pestaña: <strong>Tienda</strong> o <strong>Más</strong>. Si algo falla, abre la consola (F12) y copia aquí el error.</p>
+    </div>
+  </main>
+
+  <footer>© Tienda Escolar</footer>
+
+<script>
+/* ---------------------- Almacenamiento ---------------------- */
+const KEY_USERS = 'tienda_users_v1';      // array [{username,password}]
+const KEY_CURRENT = 'tienda_current_v1';
+
+function getUsers(){
+  return JSON.parse(localStorage.getItem(KEY_USERS) || '[]');
+}
+function setUsers(list){
+  localStorage.setItem(KEY_USERS, JSON.stringify(list));
+}
+function getCurrentUser(){ return localStorage.getItem(KEY_CURRENT) || null; }
+function setCurrentUser(u){ if(u) localStorage.setItem(KEY_CURRENT,u); else localStorage.removeItem(KEY_CURRENT); }
+
+/* ---------------------- Elementos ---------------------- */
+const content = document.getElementById('content');
+const btnShowLogin = document.getElementById('btnShowLogin');
+const btnShowRegister = document.getElementById('btnShowRegister');
+const profileBox = document.getElementById('profileBox');
+const profileName = document.getElementById('profileName');
+const profileImg = document.getElementById('profileImg');
+const btnLogout = document.getElementById('btnLogout');
+const navTienda = document.getElementById('navTienda');
+const navMas = document.getElementById('navMas');
+const navUsuarios = document.getElementById('navUsuarios');
+
+/* ---------------------- UI helpers ---------------------- */
+function updateAuthUI(){
+  const cur = getCurrentUser();
+  if(cur){
+    document.getElementById('authButtons').classList.add('hidden');
+    profileBox.classList.remove('hidden');
+    profileName.textContent = cur === 'Samuelf1n' ? cur + ' (CREADOR)' : cur;
+    // mostrar pestaña usuarios solo si es creador
+    if(cur === 'Samuelf1n') navUsuarios.classList.remove('hidden');
+    else navUsuarios.classList.add('hidden');
+  } else {
+    document.getElementById('authButtons').classList.remove('hidden');
+    profileBox.classList.add('hidden');
+    navUsuarios.classList.add('hidden');
+  }
+}
+
+/* ---------------------- Renderers ---------------------- */
+function renderTienda(){
+  content.innerHTML = `
+    <h2 style="margin-top:0">🍔 Tienda</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="prod-title">Oreo</div>
+        <div class="small">Galletas de chocolate rellenas de crema</div>
+        <div class="precio">$1.500</div>
+        <div class="estado disponible">Disponible</div>
+      </div>
+      <div class="card">
+        <div class="prod-title">Rizadas Mayonesa</div>
+        <div class="small">Papas fritas onduladas sabor mayonesa</div>
+        <div class="precio">$2.500</div>
+        <div class="estado disponible">Disponible</div>
+      </div>
+      <div class="card">
+        <div class="prod-title">Doritos</div>
+        <div class="small">Tortillas de maíz crujientes sabor queso</div>
+        <div class="precio">$2.500</div>
+        <div class="estado disponible">Disponible</div>
+      </div>
+      <div class="card">
+        <div class="prod-title">De Todito</div>
+        <div class="small">Mix de papas, platanitos y chicharrón</div>
+        <div class="precio">$3.500</div>
+        <div class="estado agotado">Agotado</div>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:14px"><strong>Última actualización:</strong> 29/08/2025</p>
+    <p class="small"><strong>Próxima actualización automática:</strong> 01/09/2025 — todos los productos estarán disponibles automáticamente.</p>
+
+    <a id="linkEncargar" class="encargar" href="mailto:smoscotesaavedra@gmail.com?subject=Encargo%20de%20comida&body=Hola,%20quiero%20encargar%20la%20siguiente%20comida:%0A- Producto:%0A- Cantidad:%0A- Fecha:">📩 Encargar comida</a>
+  `;
+
+  // no necesita listeners: mailto funciona directamente
+}
+
+function renderMas(){
+  content.innerHTML = `
+    <h2 style="margin-top:0">🔮 Más</h2>
+    <p class="small"><strong>Última actualización:</strong> 29/08/2025</p>
+    <p class="small">Actualmente disponibles: <strong>Oreo, Rizadas, Doritos</strong></p>
+    <p class="small"><strong>Próxima actualización:</strong> 01/09/2025 → <em>Todos los productos disponibles</em></p>
+  `;
+}
+
+function renderRegister(){
+  content.innerHTML = `
+    <h2 style="margin-top:0">Crear cuenta</h2>
+    <div style="max-width:420px">
+      <input id="regUser" type="text" placeholder="Usuario (ej: samuel123)">
+      <input id="regPass" type="password" placeholder="Contraseña">
+      <div class="actionRow" style="justify-content:flex-start">
+        <button id="btnReg" class="primary">Registrarme</button>
+        <button id="btnRegCancel" class="btn">Cancelar</button>
+      </div>
+      <p id="msgReg" class="small" style="color:var(--danger)"></p>
+    </div>
+  `;
+  document.getElementById('btnReg').addEventListener('click', () => {
+    const u = document.getElementById('regUser').value.trim();
+    const p = document.getElementById('regPass').value;
+    const msg = document.getElementById('msgReg'); msg.textContent = '';
+    if(!u || !p){ msg.textContent = 'Completa usuario y contraseña.'; return; }
+    // comprobar existencia case-insensitive
+    const users = getUsers();
+    if(users.some(x => x.username.toLowerCase() === u.toLowerCase())){ msg.textContent = 'Ese usuario ya existe.'; return; }
+    users.push({ username: u, password: p });
+    setUsers(users);
+    setCurrentUser(u);
+    updateAuthUI();
+    renderTienda();
+    alert('Registrado y conectado como ' + u);
+  });
+  document.getElementById('btnRegCancel').addEventListener('click', renderTienda);
+}
+
+function renderLogin(){
+  content.innerHTML = `
+    <h2 style="margin-top:0">Iniciar sesión</h2>
+    <div style="max-width:420px">
+      <input id="loginUser" type="text" placeholder="Usuario">
+      <input id="loginPass" type="password" placeholder="Contraseña">
+      <div class="actionRow" style="justify-content:flex-start">
+        <button id="btnLoginConfirm" class="primary">Entrar</button>
+        <button id="btnLoginCancel" class="btn">Cancelar</button>
+      </div>
+      <p id="msgLogin" class="small" style="color:var(--danger)"></p>
+    </div>
+  `;
+  document.getElementById('btnLoginConfirm').addEventListener('click', () => {
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+    const msg = document.getElementById('msgLogin'); msg.textContent = '';
+    const users = getUsers();
+    const found = users.find(x => x.username === u && x.password === p);
+    if(!found){ msg.textContent = 'Usuario o contraseña incorrectos.'; return; }
+    setCurrentUser(u);
+    updateAuthUI();
+    renderTienda();
+    alert('Bienvenido ' + u);
+  });
+  document.getElementById('btnLoginCancel').addEventListener('click', renderTienda);
+}
+
+function renderUsuarios(){
+  const cur = getCurrentUser();
+  if(cur !== 'Samuelf1n'){
+    content.innerHTML = `<h2>No autorizado</h2><p class="small">Solo el CREADOR puede ver esta lista.</p>`;
+    return;
+  }
+  const users = getUsers();
+  content.innerHTML = `
+    <h2 style="margin-top:0">Usuarios registrados</h2>
+    <ul class="list-usuarios">
+      ${users.map(u => `<li>${u.username} ${u.username==='Samuelf1n'?'<strong>(CREADOR)</strong>':''} 
+          <button data-user="${u.username}" class="btn" style="margin-left:8px">Eliminar</button></li>`).join('')}
+    </ul>
+    <div style="margin-top:12px">
+      <button id="btnClearAll" class="danger">Eliminar todos</button>
+      <button id="btnBack" class="btn">Volver</button>
+    </div>
+  `;
+  // añadir listeners para eliminar por usuario
+  document.querySelectorAll('.list-usuarios button[data-user]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const who = e.target.getAttribute('data-user');
+      if(confirm('Eliminar usuario '+who+' ?')){
+        let usersList = getUsers();
+        usersList = usersList.filter(x=>x.username !== who);
+        setUsers(usersList);
+        // si borras al usuario actualmente logeado: cerramos su sesión
+        if(getCurrentUser() === who){ setCurrentUser(null); updateAuthUI(); }
+        renderUsuarios();
+      }
+    });
+  });
+  document.getElementById('btnClearAll').addEventListener('click', ()=>{
+    if(confirm('Eliminar TODOS los usuarios? (Esto también cerrará sesión si estás conectado)')){
+      setUsers([]); setCurrentUser(null); updateAuthUI(); renderTienda(); alert('Lista borrada.');
+    }
+  });
+  document.getElementById('btnBack').addEventListener('click', renderTienda);
+}
+
+/* ---------------------- Logout ---------------------- */
+function doLogout(){
+  if(confirm('Cerrar sesión?')){
+    setCurrentUser(null);
+    updateAuthUI();
+    renderTienda();
+  }
+}
+
+/* ---------------------- Eventos estáticos ---------------------- */
+btnShowRegister.addEventListener('click', renderRegister);
+btnShowLogin.addEventListener('click', renderLogin);
+navTienda.addEventListener('click', renderTienda);
+navMas.addEventListener('click', renderMas);
+navUsuarios.addEventListener('click', renderUsuarios);
+btnLogout.addEventListener('click', doLogout);
+
+/* ---------------------- Inicializar ---------------------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // asegurar estructura usuarios
+  if(!localStorage.getItem(KEY_USERS)){
+    // si quieres puedes introducir un usuario por defecto:
+    // setUsers([{username:'Samuelf1n', password:'tuPass'}]);
+    setUsers(getUsers());
+  }
+  updateAuthUI();
+  renderTienda();
+});
+</script>
+</body>
+</html>
